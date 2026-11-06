@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>負けへんで｜クラロワの負けを分析</title>
+<meta name="description" content="プレイヤータグを入れるだけで、直近の対戦からどのデッキに負けているか、苦手な守りと攻め、改善のヒントがわかる非公式ツール。">
+<meta name="theme-color" content="#1a1214">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  --bg:#1a1214; --surface:#251a1d; --surface2:#33242a; --line:#4a3239;
+  --fg:#f6ebe7; --muted:#b59aa0; --rose:#ec6a82; --rose-deep:#a83a52; --apricot:#f0a35e;
+  --win:#5ccf96; --loss:#ff7070;
+  --display:"Dela Gothic One","Hiragino Sans","Noto Sans JP",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.75;
+  padding:max(20px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 48px max(16px,env(safe-area-inset-left))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+.muted{color:var(--muted)}
+.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--apricot);font-weight:700}
+header{display:flex;flex-direction:column;gap:10px}
+h1{font-size:clamp(36px,11vw,48px);line-height:1.2;color:var(--fg)}
+h1 span{display:block;font-size:.5em;color:var(--rose)}
+form{display:flex;flex-direction:column;gap:10px}
+.field{display:flex;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:0 14px}
+.field:focus-within{border-color:var(--rose)}
+.field span{font-family:var(--display);color:var(--muted);font-size:20px}
+input{flex:1;min-width:0;background:none;border:0;color:var(--fg);font:700 20px/1 var(--body);padding:16px 8px;letter-spacing:.06em;text-transform:uppercase;outline:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--apricot);outline-offset:2px}
+.primary{background:var(--rose);color:#fff;border:0;border-radius:10px;padding:15px;font-family:var(--display);font-size:18px;box-shadow:0 4px 0 var(--rose-deep)}
+.primary:active{transform:translateY(2px);box-shadow:0 2px 0 var(--rose-deep)}
+.primary:disabled{opacity:.6}
+.link{background:none;border:0;color:var(--rose);font-weight:700;font-size:14px;padding:0;text-decoration:underline}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.error{background:#3a1a22;border:1px solid var(--loss);border-radius:12px;padding:12px 14px;font-size:14px}
+section{display:flex;flex-direction:column;gap:12px}
+h2{font-size:20px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sum div{background:var(--surface);border-radius:10px;padding:12px;text-align:center}
+.sum b{display:block;font-family:var(--display);font-weight:400;font-size:24px;font-variant-numeric:tabular-nums}
+.sum small{font-size:12px;color:var(--muted)}
+.w{color:var(--win)} .l{color:var(--loss)}
+.arch{background:var(--surface);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.arch-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.rec{font-family:var(--display);font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ratio{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--surface2)}
+.ratio i{display:block}
+.deck{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.deck.few{grid-template-columns:repeat(8,1fr)}
+.deck img{width:100%;aspect-ratio:5/6;object-fit:contain}
+.chip{font-size:10px;line-height:1.2;background:var(--surface2);border-radius:6px;padding:4px 2px;text-align:center;word-break:break-all;display:flex;align-items:center;justify-content:center;aspect-ratio:5/6}
+.note{font-size:12px;color:var(--muted);margin:0}
+.weak{background:var(--surface);border-radius:10px;overflow:hidden;border-left:4px solid var(--rose)}
+.weak summary{list-style:none;cursor:pointer;padding:16px;display:flex;flex-direction:column;gap:6px}
+.weak summary::-webkit-details-marker{display:none}
+.weak summary .more{font-size:13px;color:var(--rose);font-weight:700}
+.weak[open] summary .more{display:none}
+.tag{align-self:flex-start;font-size:12px;font-weight:700;background:var(--surface2);border-radius:999px;padding:2px 10px;color:var(--rose)}
+.weak h3{font-size:17px;line-height:1.5}
+.evi{margin:0;font-size:14px;color:var(--muted)}
+.body{padding:0 16px 18px;display:flex;flex-direction:column;gap:14px;border-top:1px dashed var(--line);padding-top:14px}
+.body h4{margin:0 0 4px;font-size:13px;color:var(--apricot);letter-spacing:.06em}
+.body p{margin:0;font-size:15px}
+.body ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.practice{background:var(--surface2);border-radius:12px;padding:12px 14px}
+.mu{background:var(--surface);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.mu ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.good{background:var(--surface);border-radius:10px;padding:14px 16px;font-size:15px}
+.vids{display:flex;flex-direction:column;gap:8px}
+.vids a{display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--surface);border-radius:10px;padding:12px 14px;color:var(--fg);text-decoration:none;font-weight:700}
+.vids a span{color:var(--rose);font-size:13px;white-space:nowrap}
+.vids a.mine{border:2px solid var(--rose)}
+footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:6px}
+footer a{color:var(--muted)}
+.loading{text-align:center;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">クラロワ 負け分析ツール（非公式）</div>
+    <h1>負けへんで<span>なぜ負けた？を、ちゃんと分析。</span></h1>
+    <p class="muted" style="margin:0">プレイヤータグを入れるだけ。直近の対戦から、負けているデッキと苦手な守り・攻め、改善のヒントを出します。</p>
+  </header>
+
+  <form id="f">
+    <label for="tag" class="hint">プレイヤータグ（ゲーム内のプロフィールに表示）</label>
+    <div class="field"><span>#</span><input id="tag" name="tag" autocomplete="off" autocapitalize="characters" placeholder="2PP0V8YG" maxlength="14"></div>
+    <button class="primary" id="go">分析する</button>
+    <button type="button" class="link" id="demo">デモデータで見てみる</button>
+  </form>
+
+  <div id="out"></div>
+
+  <footer>
+    <span>This material is unofficial and is not endorsed by Supercell. For more information see <a href="https://supercell.com/fan-content-policy" target="_blank" rel="noopener">Supercell's Fan Content Policy</a>.</span>
+    <span>このサイトは非公式のファンツールで、Supercell社とは関係ありません。分析は直近の対戦履歴からの推測です。</span>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const MY_CHANNEL = "https://www.youtube.com/@Ph_normal";
+
+try { const t = localStorage.getItem("tag"); if (t) $("tag").value = t; } catch (e) {}
+const q = new URLSearchParams(location.search).get("tag");
+if (q) { $("tag").value = q.replace("#",""); run(q); }
+
+$("f").addEventListener("submit", e => { e.preventDefault(); run($("tag").value); });
+$("demo").addEventListener("click", () => run("DEMO"));
+
+function deckHtml(cards) {
+  return `<div class="deck">${cards.map(c => {
+    const u = c.iconUrls && c.iconUrls.medium;
+    return u ? `<img src="${esc(u)}" alt="${esc(c.name)}" loading="lazy">` : `<div class="chip">${esc(c.name)}</div>`;
+  }).join("")}</div>`;
+}
+
+async function run(tag) {
+  tag = String(tag || "").trim();
+  if (!tag) { $("out").innerHTML = `<div class="error">プレイヤータグを入れてください。</div>`; return; }
+  $("go").disabled = true;
+  $("out").innerHTML = `<p class="loading">対戦履歴を読み込み中…（久しぶりのアクセスだと1分ほどかかります）</p>`;
+  try {
+    const r = await fetch(`/api/analyze?tag=${encodeURIComponent(tag)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "エラーが発生しました。");
+    if (tag.toUpperCase() !== "DEMO") { try { localStorage.setItem("tag", tag.replace("#","")); } catch (e) {} }
+    render(d);
+  } catch (e) {
+    $("out").innerHTML = `<div class="error">${esc(e.message)}</div>`;
+  } finally { $("go").disabled = false; }
+}
+
+function weakHtml(w, i) {
+  return `<details class="weak"${i === 0 ? " open" : ""}>
+    <summary>
+      <span class="tag">${esc(w.area)}</span>
+      <h3>${esc(w.title)}</h3>
+      <p class="evi">${esc(w.evidence)}</p>
+      <span class="more">くわしい解説を見る ▾</span>
+    </summary>
+    <div class="body">
+      <div><h4>なぜ負けやすいのか</h4><p>${esc(w.why)}</p></div>
+      ${w.cards ? `<div><h4>${esc(w.cardsLabel)}</h4>${w.cards.length ? deckHtml(w.cards) : `<p>なし</p>`}</div>` : ""}
+      <div><h4>改善のポイント</h4><ol>${w.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>
+      <div class="practice"><h4>練習方法</h4><p>${esc(w.practice)}</p></div>
+    </div>
+  </details>`;
+}
+
+function render(d) {
+  if (!d.total) { $("out").innerHTML = `<div class="error">分析できる1対1の対戦が見つかりませんでした。何戦か遊んでから試してください。</div>`; return; }
+  const rate = Math.round(d.wins / d.total * 100);
+  const lossArch = d.archetypes.filter(a => a.losses > 0).slice(0, 5);
+
+  $("out").innerHTML = `<div style="display:flex;flex-direction:column;gap:30px">
+  <section>
+    <div class="eyebrow">${esc(d.player.name)}　${esc(d.player.tag)}　トロフィー ${esc(d.player.trophies ?? "-")}</div>
+    <div class="sum">
+      <div><b>${d.total}</b><small>対戦数</small></div>
+      <div><b><span class="w">${d.wins}</span>-<span class="l">${d.losses}</span></b><small>勝-敗</small></div>
+      <div><b>${rate}%</b><small>勝率</small></div>
+    </div>
+    <p class="note">直近の対戦履歴（最大25戦・引き分けを除く1対1）から集計しています。</p>
+  </section>
+
+  <section>
+    <h2>負けているデッキ</h2>
+    ${lossArch.map(a => `<div class="arch">
+      <div class="arch-top"><b>${esc(a.label)}</b><span class="rec"><span class="w">${a.wins}勝</span> <span class="l">${a.losses}敗</span></span></div>
+      <div class="ratio"><i style="width:${a.wins/a.games*100}%;background:var(--win)"></i><i style="width:${a.losses/a.games*100}%;background:var(--loss)"></i></div>
+      ${a.lastLossDeck ? `<p class="note">最近負けた相手のデッキ</p>${deckHtml(a.lastLossDeck)}` : ""}
+    </div>`).join("")}
+  </section>
+
+  <section>
+    <h2>苦手な守り・攻め</h2>
+    ${d.weaknesses.length ? d.weaknesses.map(weakHtml).join("") : `<div class="good">目立った苦手は見つかりませんでした。下の「型ごとの攻略」と対策動画をチェックしてみてください。</div>`}
+    <p class="note">配置やタイミングのデータは公式APIにないため、デッキの中身と勝敗からの推測です。</p>
+  </section>
+
+  ${d.matchups && d.matchups.length ? `<section>
+    <h2>負けている型の攻略ポイント</h2>
+    ${d.matchups.map(m => `<div class="mu">
+      <div class="arch-top"><b>${esc(m.label)}</b><span class="rec"><span class="w">${m.wins}勝</span> <span class="l">${m.losses}敗</span></span></div>
+      <ul>${m.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+    </div>`).join("")}
+  </section>` : ""}
+
+  ${d.mainDeck.length ? `<section><h2>よく使っているデッキ</h2>${deckHtml(d.mainDeck)}</section>` : ""}
+
+  <section>
+    <h2>おすすめの対策動画</h2>
+    <div class="vids">
+      ${d.videos.map(v => `<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(v.query)}" target="_blank" rel="noopener">${esc(v.label)}<span>YouTubeで探す →</span></a>`).join("")}
+      <a class="mine" href="${MY_CHANNEL}" target="_blank" rel="noopener">作者のクラロワ動画（みっころりチャンネル）<span>見る →</span></a>
+    </div>
+  </section>
+  </div>`;
+}
+</script>
+</body>
+</html>
