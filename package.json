@@ -1,0 +1,9 @@
+{
+  "name": "make-log",
+  "version": "0.1.0",
+  "private": true,
+  "description": "クラロワの対戦履歴から負け傾向を分析する非公式ファンツール",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}
